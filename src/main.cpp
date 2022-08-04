@@ -111,6 +111,23 @@ unsigned long average;               // The RPM value after applying the smoothi
 float circunferenciaRoda = 1.596; // Roda do DT1
 float velocidadeKm;               // Velocidade em km/h
 
+// Velocidade Média
+float velocidadeKmSum = 0;
+float container = 0;
+int indice = 1;
+float velocidadeKmMedia = 0;
+
+// Variaveis para distancia
+unsigned long next;
+unsigned long interval;
+float distancia = 0;
+float distanciaSum = 0;
+float distanciaContainer = 0;
+
+// interrupt botao
+volatile unsigned long tempo_antigo = 0;
+volatile unsigned long tempo_volta = 0;
+
 // LCD I2C Display:
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>          // Include LCD i2c
@@ -153,11 +170,20 @@ void Pulse_Event() // The interrupt runs this to calculate the period between pu
   }
 } // End of Pulse_Event.
 
+// Funcao para reiniciar tempo de volta quando botao for pressionado, lembrar de pressionar antes da primeira volta
+void lapTime()
+{
+  tempo_volta = millis() - tempo_antigo;
+  tempo_antigo = millis();
+}
+
 void setup() // Start of setup:
 {
+  next = millis() + interval;
 
   Serial.begin(9600);                                             // Begin serial communication.
   attachInterrupt(digitalPinToInterrupt(2), Pulse_Event, RISING); // Enable interruption pin 2 when going from LOW to HIGH.
+  attachInterrupt(digitalPinToInterrupt(3), lapTime, RISING);     // 3?????
 
   // LCD Display:
   display.init();      // Initialize display with the I2C address.
@@ -266,6 +292,26 @@ void loop() // Start of loop:
   // Velocidade em km/h
 
   velocidadeKm = circunferenciaRoda * (float)average / (50.0 / 3.0);
+
+  // Velocidade media
+  velocidadeKmSum = velocidadeKm + container;
+  container = velocidadeKm;
+  velocidadeKmMedia = velocidadeKmSum / indice;
+  indice++;
+
+  // distancia
+  if (millis() >= next)
+  {
+    // código a executar
+    distancia = velocidadeKmMedia * (float)interval;
+    distanciaSum = distancia + distanciaContainer;
+    distanciaContainer = distancia;
+
+    next = millis() + interval; // ajusta o próximo evento
+  }
+
+  // tempo de volta
+
   display.setCursor(1, 0); // (x,y).
   display.print("km/h");   // Text or value to print.
 
@@ -274,4 +320,4 @@ void loop() // Start of loop:
 
   display.display(); // Print everything we set previously.
 
-} // End of loop.
+} // End of loop
