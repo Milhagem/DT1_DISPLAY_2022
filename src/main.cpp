@@ -104,14 +104,15 @@ float circunferenciaRoda = 1.596; // Roda do DT1
 float velocidadeKm;               // Velocidade em km/h
 
 // Velocidade Média
+unsigned long nextVm = 0;
 float velocidadeKmSum = 0;
 float container = 0;
 int indice = 1;
 float velocidadeKmMedia = 0;
 
 // Variaveis para distancia
-unsigned long nextDist;
-unsigned long interval = 10; // intervalo de 10 ms para somar distancia e tempo de volta
+unsigned long nextDist = 0;
+unsigned long interval = 10; // intervalo de 1000 ms para somar distancia e tempo de volta
 float distancia = 0;
 float distanciaSum = 0;
 float distanciaContainer = 0;
@@ -124,7 +125,11 @@ volatile unsigned long tempo_volta = 0;
 unsigned long milisegundos = 0;
 unsigned long segundos = 0;
 unsigned long minutos = 0;
-unsigned long nextTimer;
+unsigned long nextTimer = 0;
+
+// tempo
+unsigned long twentyFive = 1500000;
+unsigned long remainingTime = 1000;
 
 // LCD I2C Display:
 #include <Wire.h>
@@ -272,13 +277,24 @@ void loop() // Start of loop:
   // Convert float to a string:
   dtostrf(average, 5, 0, string); // (<variable>,<amount of digits we are going to use>,<amount of decimal digits>,<string name>)
 
-  display.clear();         // Clear the display so we can refresh.
+  display.clear(); // Clear the display so we can refresh.
+                   /*
+                   display.setCursor(1, 1); // (x,y).
+                   display.print("VM:");    // Text or value to print.
+                 
+                   // Print variable with right alignment:
+                   display.setCursor(6, 1);          // (x,y).
+                   display.print(velocidadeKmMedia); // Text or value to print.*/
+
   display.setCursor(1, 1); // (x,y).
-  display.print("RPM:");   // Text or value to print.
+  display.print("T:");     // Text or value to print.
 
   // Print variable with right alignment:
   display.setCursor(6, 1); // (x,y).
-  display.print(string);   // Text or value to print.
+  display.print(minutos);  // Text or value to print.
+
+  display.setCursor(9, 1); // (x,y).
+  display.print(segundos); // Text or value to print.
                            /*
                               Print a comma for the thousands separator
                              if(average > 999)  // If value is above 999:
@@ -291,48 +307,28 @@ void loop() // Start of loop:
 
   velocidadeKm = circunferenciaRoda * (float)average / (50.0 / 3.0);
 
-  // Velocidade media
-  velocidadeKmSum = velocidadeKm + container;
-  container = velocidadeKm;
-  velocidadeKmMedia = velocidadeKmSum / indice;
-  indice++;
-
-  // distancia
-  if (millis() >= nextDist)
+  // velocidade media
+  if (millis() >= nextVm)
   {
     // código a executar
-    distancia = velocidadeKmMedia * (float)interval;
-    distanciaSum = distancia + distanciaContainer;
-    distanciaContainer = distancia;
-
+    velocidadeKmSum = velocidadeKm + container;
+    container = velocidadeKm;
+    velocidadeKmMedia = velocidadeKmSum / indice;
+    indice++;
     // ajusta o próximo evento
-    nextDist = millis() + interval;
+    nextVm = millis() + interval;
   }
-
-  // tempo de volta
-  if (millis() >= nextTimer)
+  if (remainingTime >= 1000)
   {
-    // execucao
-    milisegundos = milisegundos + interval;
-    if (milisegundos == (1000 - interval))
-    {
-      milisegundos = 0;
-      segundos++;
-    }
-    if (segundos == 60)
-    {
-      segundos = 0;
-      minutos++;
-    }
-    if (minutos == 99) // limite 99 minutos
-    {
-      minutos = 0;
-      segundos = 0;
-      milisegundos = 0;
-    }
-
-    // ajusta o proximo evento
-    nextTimer = millis() + interval;
+    remainingTime = twentyFive - millis();
+    minutos = remainingTime / 60000;
+    segundos = (remainingTime % 60000) / 1000;
+  }
+  else
+  {
+    minutos = 0;
+    segundos = 0;
+    remainingTime = 0;
   }
 
   display.setCursor(1, 0); // (x,y).
