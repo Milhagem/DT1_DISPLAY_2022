@@ -13,10 +13,6 @@ without problems.
 We use an interrupt for the input so you have to choose pin 2 or 3 (for Arduino Uno/nano). In this example we
 use pin 2.
 
-
-
-
-
 ///OLED 0.96" Display:
 We are going to use the OLED 128x64 I2C with SSD1306 driver using the Adafruit library.
 
@@ -32,10 +28,6 @@ What that does is pull-up the I2C pins to make it more reliable and prevents loc
 Libraries needed for the OLED display:
 https://github.com/adafruit/Adafruit_SSD1306
 https://github.com/adafruit/Adafruit-GFX-Library
-
-
-
-
 
 This sketch was made for my video tutorial shown here: https://www.youtube.com/watch?v=u2uJMJWsfsg
 
@@ -118,8 +110,8 @@ int indice = 1;
 float velocidadeKmMedia = 0;
 
 // Variaveis para distancia
-unsigned long next;
-unsigned long interval;
+unsigned long nextDist;
+unsigned long interval = 10; // intervalo de 10 ms para somar distancia e tempo de volta
 float distancia = 0;
 float distanciaSum = 0;
 float distanciaContainer = 0;
@@ -127,6 +119,12 @@ float distanciaContainer = 0;
 // interrupt botao
 volatile unsigned long tempo_antigo = 0;
 volatile unsigned long tempo_volta = 0;
+
+// tempo volta
+unsigned long milisegundos = 0;
+unsigned long segundos = 0;
+unsigned long minutos = 0;
+unsigned long nextTimer;
 
 // LCD I2C Display:
 #include <Wire.h>
@@ -179,7 +177,8 @@ void lapTime()
 
 void setup() // Start of setup:
 {
-  next = millis() + interval;
+  nextDist = millis() + interval;
+  nextTimer = nextDist;
 
   Serial.begin(9600);                                             // Begin serial communication.
   attachInterrupt(digitalPinToInterrupt(2), Pulse_Event, RISING); // Enable interruption pin 2 when going from LOW to HIGH.
@@ -199,7 +198,6 @@ void setup() // Start of setup:
 
 void loop() // Start of loop:
 {
-
   // The following is going to store the two values that might change in the middle of the cycle.
   // We are going to do math and functions with those values and they can create glitches if they change in the
   // middle of the cycle.
@@ -300,17 +298,42 @@ void loop() // Start of loop:
   indice++;
 
   // distancia
-  if (millis() >= next)
+  if (millis() >= nextDist)
   {
     // código a executar
     distancia = velocidadeKmMedia * (float)interval;
     distanciaSum = distancia + distanciaContainer;
     distanciaContainer = distancia;
 
-    next = millis() + interval; // ajusta o próximo evento
+    // ajusta o próximo evento
+    nextDist = millis() + interval;
   }
 
   // tempo de volta
+  if (millis() >= nextTimer)
+  {
+    // execucao
+    milisegundos = milisegundos + interval;
+    if (milisegundos == (1000 - interval))
+    {
+      milisegundos = 0;
+      segundos++;
+    }
+    if (segundos == 60)
+    {
+      segundos = 0;
+      minutos++;
+    }
+    if (minutos == 99) // limite 99 minutos
+    {
+      minutos = 0;
+      segundos = 0;
+      milisegundos = 0;
+    }
+
+    // ajusta o proximo evento
+    nextTimer = millis() + interval;
+  }
 
   display.setCursor(1, 0); // (x,y).
   display.print("km/h");   // Text or value to print.
