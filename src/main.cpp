@@ -21,6 +21,7 @@ Pins for OLED display and arduino uno/nano:
  * VCC = 5V
  * SCL = A5
  * SDA = A4
+ 
 
 It's a good idea to put a resistor between A4-5V and A5-5V to help stabilize the connection.
 What that does is pull-up the I2C pins to make it more reliable and prevents lock-ups.
@@ -59,14 +60,14 @@ const byte numReadings = 100; // Number of samples for smoothing. The higher, th
 // Variables:
 /////////////
 
-volatile unsigned long LastTimeWeMeasured;                       // Stores the last time we measured a pulse so we can calculate the period.
+volatile unsigned long LastTimeWeMeasured;                   // Stores the last time we measured a pulse so we can calculate the period.
 volatile unsigned long PeriodBetweenPulses = ZeroTimeout + 1000; // Stores the period between pulses in microseconds.
                                                                  // It has a big number so it doesn't start with 0 which would be interpreted as a high frequency.
 volatile unsigned long PeriodAverage = ZeroTimeout + 1000;       // Stores the period between pulses in microseconds in total, if we are taking multiple pulses.
                                                                  // It has a big number so it doesn't start with 0 which would be interpreted as a high frequency.
-unsigned long FrequencyRaw;                                      // Calculated frequency, based on the period. This has a lot of extra decimals without the decimal point.
-unsigned long FrequencyReal;                                     // Frequency without decimals.
-unsigned long RPM;                                               // Raw RPM without any processing.
+unsigned long FrequencyRaw;                                  // Calculated frequency, based on the period. This has a lot of extra decimals without the decimal point.
+unsigned long FrequencyReal;                                 // Frequency without decimals.
+unsigned long RPM;                                           // Raw RPM without any processing.
 unsigned int PulseCounter = 1;                                   // Counts the amount of pulse readings we took so we can average multiple pulses before calculating the period.
 
 unsigned long PeriodSum; // Stores the summation of all the periods to do the average.
@@ -186,7 +187,7 @@ void setup() // Start of setup:
   nextTimer = nextDist;
 
   Serial.begin(9600);                                             // Begin serial communication.
-  attachInterrupt(digitalPinToInterrupt(2), Pulse_Event, RISING); // Enable interruption pin 2 when going from LOW to HIGH.
+  attachInterrupt(digitalPinToInterrupt(2), Pulse_Event, FALLING); // Enable interruption pin 2 when going from LOW to HIGH.
   attachInterrupt(digitalPinToInterrupt(3), lapTime, RISING);     // 3?????
 
   // LCD Display:
@@ -203,6 +204,7 @@ void setup() // Start of setup:
 
 void loop() // Start of loop:
 {
+  Serial.println(digitalRead(2));
   // The following is going to store the two values that might change in the middle of the cycle.
   // We are going to do math and functions with those values and they can create glitches if they change in the
   // middle of the cycle.
@@ -286,29 +288,51 @@ void loop() // Start of loop:
                    display.setCursor(6, 1);          // (x,y).
                    display.print(velocidadeKmMedia); // Text or value to print.*/
 
-  display.setCursor(1, 1); // (x,y).
-  display.print("T:");     // Text or value to print.
-
   // Print variable with right alignment:
-  display.setCursor(6, 1); // (x,y).
-  display.print(minutos);  // Text or value to print.
+  if (minutos >= 10)
+  {
+    display.setCursor(11, 0); // (x,y).
+    display.print(minutos);   // Text or value to print.
+  }
+  else
+  {
+    display.setCursor(12, 0); // (x,y).
+    display.print(minutos);   // Text or value to print.}
+  }
+  if (segundos >= 10)
+  {
+    display.setCursor(13, 0);
+    display.print(":");
 
-  display.setCursor(9, 1); // (x,y).
-  display.print(segundos); // Text or value to print.
-                           /*
-                              Print a comma for the thousands separator
-                             if(average > 999)  // If value is above 999:
-                             {
-                               Draw line (to show a comma)
-                               display.drawLine(63, 60, 61, 65, WHITE);  // Draw line (x0,y0,x1,y1,color).
-                             }
-                           */
+    display.setCursor(14, 0); // (x,y).
+    display.print(segundos);  // Text or value to print.
+  }
+  else
+  {
+    display.setCursor(13, 0);
+    display.print(":");
+
+    display.setCursor(14, 0); // (x,y).
+    display.print("0");       // Text or value to print.
+
+    display.setCursor(15, 0); // (x,y).
+    display.print(segundos);  // Text or value to print.
+  }
+
+  /*
+     Print a comma for the thousands separator
+    if(average > 999)  // If value is above 999:
+    {
+      Draw line (to show a comma)
+      display.drawLine(63, 60, 61, 65, WHITE);  // Draw line (x0,y0,x1,y1,color).
+    }
+  */
   // Velocidade em km/h
 
   velocidadeKm = circunferenciaRoda * (float)average / (50.0 / 3.0);
 
   // velocidade media
-  if (millis() >= nextVm)
+ /*if (millis() >= nextVm)
   {
     // código a executar
     velocidadeKmSum = velocidadeKm + container;
@@ -318,6 +342,7 @@ void loop() // Start of loop:
     // ajusta o próximo evento
     nextVm = millis() + interval;
   }
+  */
   if (remainingTime >= 1000)
   {
     remainingTime = twentyFive - millis();
@@ -331,10 +356,10 @@ void loop() // Start of loop:
     remainingTime = 0;
   }
 
-  display.setCursor(1, 0); // (x,y).
-  display.print("km/h");   // Text or value to print.
+  display.setCursor(0, 0); // (x,y).
+  display.print("V:");     // Text or value to print.
 
-  display.setCursor(7, 0);     // (x,y).
+  display.setCursor(2, 0);     // (x,y).
   display.print(velocidadeKm); // Text or value to print.
 
   display.display(); // Print everything we set previously.
